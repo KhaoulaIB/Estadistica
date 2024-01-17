@@ -1,0 +1,447 @@
+---
+title: "Taller de problemas GRUPO inferencia 2023 MAT3 GIN"
+author: "Blanca Atiénzar Martínez, Hai Zi Bibiloni Trobat y Khaoula Ikkene"
+date: "27/12/2023"
+output:
+  pdf_document:
+    number_sections: yes
+    toc: yes
+  html_document:
+    df_print: paged
+    toc: yes
+  word_document:
+    toc: yes
+linkcolor: red
+header-includes: \renewcommand{\contentsname}{Contenidos}
+citecolor: blue
+toccolor: blue
+urlcolor: blue
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,cache=FALSE)
+library(tidyverse)
+options(scipen=999)
+contador=0
+cuenta=function(x=contador) {
+  contador<<- contador+1;return(contador)}
+set.seed(2020)
+```
+
+
+# Taller  Problemas evaluable 22-23: Estadística Inferencial
+**Valor 14 puntos. Todos los  apartados valen 1 punto.**
+
+
+Se trata de resolver los siguientes problemas y cuestiones en un fichero Rmd y su  salida en un informe en  html, word  o pdf.
+
+
+## Problema `r cuenta()`: Regresión lineal simple. 7 puntos.
+
+
+Consideremos los siguientes  datos
+
+
+```{r}
+x=c(-2,-1,2,0,1,2)
+y=c(-7, -5,  5, -3,  3.0,  4)
+```
+1. Calcular manualmente haciendo una tabla  los coeficiente de  la regresión lineal de $y$ sobre $x$. 
+2. Calcular los valores $\hat{y}_i=b_0+b_1\cdot x_1$ para los valores de la muestra y el error cometido. 
+3. Calcular la estimación de la varianza del error.
+4. Resolver manualmente el contraste 
+$\left\{\begin{array}{ll} H_0: & \beta_1=0 \\ H_1: & \beta_1\not=0\end{array}\right. ,$ calculando el $p$-valor. 
+5. Calcular $SST$, $SSR$ y $SSE$. 
+6. Calcular el coeficiente de regresión lineal $r_{xy}$ y el coeficiente de determinación $R^2$. Interpretad el resultado en términos de la cantidad de varianza explicada por el modelo 
+7. Comprobar que los resultados son los mismos que los obtenidos con la  función `summary(lm(y~x))`. 
+
+**Apartado 1**
+```{r}
+# Calcular medias
+x_media = mean(x)
+y_media = mean(y)
+
+# Calcular productos x_i * y_i y x_i^2
+xy = x * y
+x_cuadrado = x^2
+
+# Crear la tabla
+tabla_regresion = data.frame(x = x, y = y, xy = xy, x_cuadrado = x_cuadrado)
+
+# diferencia_x = x_i - x'
+tabla_regresion$diferencia_x = x - x_media
+
+# diferencia_y = y_i - y'
+tabla_regresion$diferencia_y = y - y_media
+
+# diferencia_xy = (x_i - x')*(y_i - y')
+tabla_regresion$diferencia_xy = (x - x_media) * (y - y_media)
+
+# Mostrar la tabla
+tabla_regresion
+```
+** Apartado 2 **
+Para calcular los parametros  $$b_0$$ y $$b_1$$ utilizaremos las seguientes formulas:
+$$\begin{aligned}
+b_1= & \frac{n \sum_{i=1}^n x_i y_i-\sum_{i=1}^n x_i \sum_{i=1}^n y_i}{n \sum_{i=1}^n x_i^2-\left(\sum_{i=1}^n x_i\right)^2}, \\
+b_0= & \frac{\sum_{i=1}^n y_i-b_1 \sum_{i=1}^n x_i}{n} .
+\end{aligned}$$
+
+$$b_1=\frac{\tilde{s}_{x y}}{\tilde{s}_x^2}, \quad b_0=\bar{y}-b_1 \bar{x} .$$
+```{r}
+desv_x = sd(x)
+desv_x
+desv_y=sd(y)
+desv_y
+desv_xy=cov(x,y)
+desv_xy
+
+b_1 = desv_xy/desv_x^2
+b_1
+b_0 = y_media-b_1*x_media
+b_0
+```
+
+El error cometido se calcula usando la seguiente formula:
+$$E_{x_i}=y_i-b_0-b_1 \cdot x_i$$
+```{r}
+y_calculada = b_0 + b_1*x
+y_calculada
+errores = y-y_calculada
+errores
+```
+
+**Apartado 3 **
+Calcularemos la estimación de la varianza del error usando la seguiente formula:
+
+$$S^2=\frac{S S_E}{n-2}$$
+
+```{r}
+SSe=sum(errores^2)
+n = length(x)  
+var_estimada=SSe/(n-2)
+var_estimada
+
+```
+**Apartado 4**
+Vamos a resolver manualmente el seguiente constraste
+
+$$
+\begin{cases}H_0: & \beta_1=0 \\ H_1: & \beta_1 \neq 0\end{cases}
+$$
+El estadístico de constraste es el seguiente:
+$$
+T=\frac{b_1}{\frac{S}{\tilde{s}_x \sqrt{n-1}}}
+$$
+```{r}
+estadistico_T=b_1/((sqrt(var_estimada)/(desv_x*sqrt(n-1))))
+estadistico_T
+
+```
+Ahora calcularemos el p-valor de acuerdo con la seguiente formula:
+
+$$
+p=2 \cdot P\left(t_{n-2}>\left|t_0\right|\right)
+$$
+```{r}
+p_valor=2*pt(abs(estadistico_T),df=n-2,lower.tail = FALSE)
+p_valor
+
+```
+Como que el p-valor es menor que 0.05 podemos decir que tenemos suficientes evidencias para rechazar la hipótesis nula, es decir, rechazamos la hipótesis que $$\beta_1=0$$.
+
+**Apartado 5**
+
+Se nos pide calcular los seguientes parametros
+
+-SST/Variablidad total
+$$
+S S_T=\sum_{i=1}^n\left(y_i-\bar{y}\right)^2=(n-1) \cdot \tilde{s}_y^2
+$$
+
+```{r}
+SST=(n-1)*desv_y^2
+SST
+```
+Como que ya hemos calculado el SSE en los apartados anteriores y tenemos el SST podemos 
+usar la seguiente propiedad que se cumple en nuestro caso, ya que hemos obtenido nuestro parametros b_1 y b_0 usando el método de los mínimos cuadrados.
+$$
+S S_T=S S_R+S S_E
+$$
+```{r}
+SSR=SST-SSe
+SSR
+```
+**Apartado 6**
+
+Se nos pide calcular el coeficiente de regresión lineal. Para ello usaremos la seguiente formula:
+$$
+r_{x y}=\frac{\tilde{s}_{x y}}{\tilde{s}_x \cdot \tilde{s}_y} .
+$$
+
+```{r}
+r_xy=desv_xy/(desv_x*desv_y)
+r_xy
+```
+Y para el coeficiente de determinación usaremos la seguiente formula
+$$
+R^2=r_{x y}^2
+$$
+```{r}
+R_cuadrado=r_xy^2
+R_cuadrado
+
+```
+
+**Apartado 7**
+```{r}
+# Resultados obtenidos manualmente
+resultados_manuales = list(
+  Coeficientes_manuales = c(b_0, b_1),
+  Valores_ajustados = y_calculada,
+  Errores = errores,
+  Varianza_del_error = var_estimada,
+  Contraste_hipotesis = c(estadistico_T, p_valor),
+  Sumas_de_cuadrados = c(SST, SSR, SSe),
+  Coeficiente_correlacion_R_xy = r_xy,
+  Coeficiente_determinacion_R2 = R_cuadrado
+)
+
+# Resultados de summary(lm(y ~ x))
+sol_lm = summary(lm(y~x))
+resultados_summary_lm=list(
+  Coeficientes_summary = c(sol_lm$coefficients[1, 1], sol_lm$coefficients[2, 1]),
+  Valores_ajustados_summary = predict(lm(y ~ x)),
+  Errores_summary = sol_lm$residual,
+  Varianza_del_error_summary=sigma(lm(y ~ x))^2,
+  Contraste_hipotesis_summary = c(sol_lm$coefficients[2,3], sol_lm$coefficients[2,4]),
+  Sumas_de_cuadrados_summary = c(sum(sol_lm$residuals^2) + sum((lm(y ~ x)$fitted.values - mean(y))^2), sum((lm(y ~ x)$fitted.values - mean(y))^2),sum(sol_lm$residuals^2)),
+  Coeficiente_correlacion_R_xy_summary = cor(lm(y ~ x)$model$x, lm(y ~ x)$model$y),
+  Coeficiente_determinacion_R2_summary = sol_lm$r.squared
+)
+# Comparación de resultados
+list(
+  Resultados_manuales = resultados_manuales,
+  Resultados_summary_lm = resultados_summary_lm
+)
+```
+
+##  Problema `r cuenta()`: Distribución de los grados de un grafo de  contactos. 3 puntos
+
+[The marvel chronology project](http://www.chronologyproject.com/)  es una web que ha recopilado las apariciones de los personajes Marvel en cada uno de los cómics  que se van publicando.
+
+En el artículo [Marvel Universe looks almost like a real social network](https://arxiv.org/abs/cond-mat/0202174) se estudió la red de contactos de los personajes del [Universo Marvel de la serie de cómics books](https://www.marvel.com/comics?&options%5Boffset%5D=0&totalcount=12). Dos personajes  tienen relación  si han participado en al menos un mismo cómic; a semejanza del [Oracle of Bacon](https://oracleofbacon.org/) donde se relacionan los actores de las películas de Hollywood que han participado en al menos una película juntos. 
+
+
+Si construimos  el grafo de asociado a esas  relaciones el grado de cada carácter (personaje)  será el número de ortos caracteres (personajes) con los que ha colaborado. Cuando más importante es el personaje más colaboraciones tiene.
+
+
+Los grados de cada caracteres están en el fichero `datasets/degree_Marvel_characters.cvs`. Según algunos estudios la distribución de los grados de los grafos de contactos sigue una ley potencial  $\mbox{frecuencia grado }k =\beta_0\cdot grado^\beta1$  si eliminamos los 20 más pequeños.
+
+```{r carga_marvel,message=FALSE,warnings=FALSE}
+data=read_csv("datasets/degree_Marvel_characters.csv")
+```
+
+
+Se pide:
+
+1. Cargad los datos.  Calcular las frecuencias de los grados, es decir el número de caracteres que tienen 1, 2 ,3 .... colaboradores para cada grado (número de colaboraciones) observado.  
+2. Ajustar un modelo lineal, potencial y exponencial a la relación entre $y=\mbox{"frecuencia del grado"}$ y $x=grado$ dibujar las gráficas de ajuste de cada modelo con gráficos semi-log y log-log  si es necesario. 
+3. Para el mejor modelo calcular los coeficientes en las unidades originales  y escribir la  ecuación del modelos. 
+
+**Apartado 1**
+```{r}
+library(readr)
+
+# Calcular las frecuencias de los grados
+frecuencias_grados <- table(data$degree_Marvel_characters)
+frecuencias_grados
+```
+**Apartado 2**
+```{r}
+# Cargar las librerías
+library(ggplot2)
+library(dplyr)
+# Ajustar modelos
+modelo_lineal <- lm(log(frecuencias_grados) ~ log(seq_along(frecuencias_grados)))
+modelo_potencial <- lm(log(frecuencias_grados) ~ log(seq_along(frecuencias_grados))^2)
+modelo_exponencial <- lm(log(frecuencias_grados) ~ seq_along(frecuencias_grados))
+
+# Gráfico log-log
+plot(log(seq_along(frecuencias_grados)), log(frecuencias_grados), 
+     main="Ajuste de Modelos log-log", 
+     xlab="Log(Grado)", 
+     ylab="Log(Frecuencia)")
+
+lines(log(seq_along(frecuencias_grados)), predict(modelo_lineal), col="black", lty=2, lwd=2)
+lines(log(seq_along(frecuencias_grados)), predict(modelo_potencial), col="blue", lty=2, lwd=2)
+lines(log(seq_along(frecuencias_grados)), predict(modelo_exponencial), col="green", lty=2, lwd=2)
+
+legend("topright", legend=c("Lineal", "Potencial", "Exponencial"), 
+       col=c("black", "blue", "green"), lty=2, lwd=2)
+
+# Dataframe para las predicciones
+dframe <- data.frame(log_grado = log(seq_along(frecuencias_grados)))
+
+# Añadir predicciones de los modelos al dataframe
+dframe$pre_lineal <- predict(modelo_lineal)
+dframe$pre_potencial <- predict(modelo_potencial)
+dframe$pre_exponencial <- predict(modelo_exponencial)
+
+# Gráfico semi-log
+ggplot() +
+  geom_point(aes(x = log(seq_along(frecuencias_grados)), y = log(frecuencias_grados)), 
+             size = 2, color = "red") +
+  geom_line(data = dframe, aes(x = log_grado, y = pre_lineal, color = "Lineal"),
+            show.legend = TRUE) +
+  geom_line(data = dframe, aes(x = log_grado, y = pre_potencial, color = "Potencial"),
+            show.legend = TRUE) +
+  geom_line(data = dframe, aes(x = log_grado, y = pre_exponencial, color = "Exponencial"),
+            show.legend = TRUE) +
+  labs(title = "Ajuste de Modelos semi-log",
+       x = "Log(Grado)",
+       y = "Log(Frecuencia)") +
+  theme_minimal() +
+  scale_color_manual(name = "", 
+                     values = c("Lineal" = "red", "Potencial" = "blue", "Exponencial" = "green"),
+                     labels = c("Exponencial", "Lineal", "Potencial")) +
+  guides(color = guide_legend(override.aes = list(linetype = c("dashed", "dashed", "dashed")))) +
+  theme(legend.key.size = unit(1, "cm"))
+```
+
+**Apartado 3**
+La elección de un modelo adecuado se basa en la evaluación de varias métricas y consideraciones contextuales. En el contexto de ajustar un modelo a la distribución de grados de un grafo de contactos, se han propuesto tres modelos: lineal, potencial y exponencial.
+La elección del modelo potencial se basa en su adecuación teórica a la distribución de grados en redes complejas, su interpretación en el contexto del problema y su rendimiento en términos de ajuste a los datos. 
+```{r}
+mejor_modelo = modelo_potencial
+
+# Obtener coeficientes
+coeficient_0 <- exp(coef(mejor_modelo)[1])
+coeficient_1 <- coef(mejor_modelo)[2]
+
+# Ecuación del modelo en las unidades originales
+ecuacion_modelo <- paste("Frecuencia = ", coeficient_0, " * Grado ^ ", coeficient_1, sep="")
+
+# Imprimir la ecuación
+cat("Ecuación del modelo potencial (en unidades originales):", ecuacion_modelo, "\n")
+```
+
+
+##  Problema `r cuenta()`: Longitud reviews mallorca AirBnb 2022. 4 puntos
+
+
+El siguiente código  cuenta cuantas palabras hay en un  la variable `commnets` del fichero 
+`reviews.csv` de los comentario a cada apartamento de Mallorca extraído de  la web [Inside AirBnb](http://insideairbnb.com/) que recoge datos de los alquileres vacacionales por zonas del mundo de la web de alquiler de apartamentos vacacionales [AirBnb](https://www.airbnb.es/). Se puede leer con el siguiente código y contar el número de palabras  con la `stringr::str_count`.
+
+
+```{r}
+read_csv("datasets/reviews.csv")->reviews
+names(reviews)
+library(stringr)
+#str_count(str, pattern = “”)
+str_count(str=reviews$comments[1],pattern ="\\s+")
+```
+
+
+
+Es habitual  que la frecuencia de  la longitud de los comentarios, es decir cuantos comentarios tienen 5, 6, 7 palabras y sus frecuencias siguen una ley que puede ser: lineal, exponencial o potencial. Como hemos hecho en el tema de regresión lineal calcular se trata de calcular y dibujar los tres modelos y decidir cuál es el más ajustado.
+
+Se pide:
+
+
+1. Calcular las longitudes de todos los comentarios (utilizar funciones como `mutate`, `arrange`, `filter`....) y las frecuencias de cada  longitud y filtrar (con la función `filter`)  solo los comentarios  con **MÁS de 20 palabras y MENOS de 800**  y guardarlos en una tibble con dos columnas $N_{words}$= número de palabras y $Frec$=frecuencia absoluta de las palabras.  
+2. Calcular los tres modelos lineal $Freq=\beta_0 +\beta_1 \cdot N_{words}$, potencial
+$Freq=\beta_0\cdot  \left(N_{words}\right)^{\beta_1}$ y exponencial $Freq= \beta_0\cdot \beta_1^{N_{words}}$.  
+3. Repetir el ajuste anterior pero sustituyendo el la variable $N_{words}$ por el rango u orden de $N_{words}$.  
+
+
+**Apartado 1**
+```{r}
+# Cargar bibliotecas
+library(readr)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+
+# Cargar datos
+ reviews <- read.csv("datasets/reviews.csv")
+
+# Calcular longitudes de comentarios
+reviews %>%
+  mutate(comment_length = str_count(comments, "\\S+")) -> reviews_with_lengths
+
+# Filtrar comentarios con más de 20 y menos de 800 palabras
+filtered_reviews <- reviews_with_lengths %>%
+  filter(comment_length > 20, comment_length < 800) %>%
+  select(comment_length)
+
+# Verificar la tibble resultante
+head(filtered_reviews)
+
+
+# Mostrar las primeras filas del conjunto de datos
+head(reviews)
+```
+Ahora, vamos a crear la tibble con las frecuencias de cada longitud de palabras.
+```{r}
+# Contar frecuencias
+word_freq <- filtered_reviews %>%
+  group_by(comment_length) %>%
+  summarise(frequency = n())
+
+# Verificar la tibble de frecuencias
+head(word_freq)
+```
+Ahora, visualizaremos los datos.
+```{r}
+# Visualizar los datos
+ggplot(word_freq, aes(x = comment_length, y = frequency)) +
+  geom_point() +
+  labs(title = "Frecuencia de Longitudes de Palabras",
+       x = "Número de Palabras",
+       y = "Frecuencia Absoluta")
+```
+
+**Apartado 2**
+```{r}
+# Ajustar modelos lineales, exponenciales y potenciales
+linear_model <- lm(frequency ~ comment_length, data = word_freq)
+exp_model <- lm(log(frequency) ~ comment_length, data = word_freq)
+power_model <- lm(log(frequency) ~ log(comment_length), data = word_freq)
+
+# Agregar líneas de ajuste a la gráfica con leyenda
+ggplot(word_freq, aes(x = comment_length, y = frequency)) +
+  geom_point() +
+  geom_line(aes(x = comment_length, y = predict(linear_model), color = "Lineal"), linetype = "dashed") +
+  geom_line(aes(x = comment_length, y = exp(predict(exp_model)), color = "Exponencial"), linetype = "dashed") +
+  geom_line(aes(x = comment_length, y = exp(predict(power_model)), color = "Potencial"), linetype = "dashed") +
+  labs(title = "Ajuste de Modelos a Frecuencia de Longitudes de Palabras",
+       x = "Número de Palabras",
+       y = "Frecuencia Absoluta",
+       color = "Modelo") +
+  theme(legend.position = "top")
+```
+
+**Apartado 3**
+```{r}
+# Calcular el rango de N_words
+word_freq <- word_freq %>%
+  mutate(rank_n_words = rank(comment_length))
+
+# Ajustar modelos lineales, exponenciales y potenciales con el rango
+linear_model_rank <- lm(frequency ~ rank_n_words, data = word_freq)
+exp_model_rank <- lm(log(frequency) ~ rank_n_words, data = word_freq)
+power_model_rank <- lm(log(frequency) ~ log(rank_n_words), data = word_freq)
+
+# Agregar líneas de ajuste a la gráfica con leyenda
+ggplot(word_freq, aes(x = comment_length, y = frequency)) +
+  geom_point() +
+  geom_line(aes(x = comment_length, y = predict(linear_model_rank), color = "Lineal"), linetype = "dashed") +
+  geom_line(aes(x = comment_length, y = exp(predict(exp_model_rank)), color = "Exponencial"), linetype = "dashed") +
+  geom_line(aes(x = comment_length, y = exp(predict(power_model_rank)), color = "Potencial"), linetype = "dashed") +
+  labs(title = "Ajuste de Modelos a Frecuencia de Longitudes de Palabras",
+       x = "Número de Palabras",
+       y = "Frecuencia Absoluta",
+       color = "Modelo") +
+  theme(legend.position = "top")
+```
